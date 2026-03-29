@@ -354,6 +354,26 @@ app.get('/api/plugins', auth, (req, res) => {
   }
 });
 
+app.get('/api/plugins/:name/download', auth, (req, res) => {
+  const name = req.params.name;
+  if (!name) return res.status(400).json({ error: 'Missing plugin name' });
+  try {
+    const entries = fs.readdirSync(PLUGINS_DIR);
+    const nameLower = name.toLowerCase();
+    const jar = entries.find(f => {
+      if (!/\.jar$/i.test(f)) return false;
+      const base = f.replace(/\.disabled\.jar$/i, '').replace(/\.jar$/i, '').toLowerCase();
+      return base === nameLower || base.startsWith(nameLower + '-') || base.startsWith(nameLower + '_');
+    });
+    if (!jar) return res.status(404).json({ error: 'Plugin not found' });
+    const jarPath = path.join(PLUGINS_DIR, jar);
+    if (!jarPath.startsWith(PLUGINS_DIR)) return res.status(400).json({ error: 'Invalid path' });
+    return res.download(jarPath, jar);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/plugins/upload', auth, (req, res) => {
   const name = req.query.name;
   if (!name || !name.endsWith('.jar') || /[\/\\]/.test(name) || name.includes('..')) {

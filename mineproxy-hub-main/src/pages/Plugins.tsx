@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Upload, Trash2, Search, Power } from 'lucide-react';
+import { Package, Upload, Trash2, Search, Power, Download } from 'lucide-react';
 import { api, PluginInfo } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -127,6 +127,14 @@ const Plugins = () => {
                 >
                   <Power className={`h-3.5 w-3.5 ${p.enabled ? 'text-green-500' : 'text-muted-foreground'}`} />
                 </button>
+                <a
+                  href={`/api/plugins/${encodeURIComponent(p.name)}/download`}
+                  download
+                  className="p-1.5 rounded hover:bg-primary/10 transition-colors"
+                  title="Download plugin"
+                >
+                  <Download className="h-3.5 w-3.5 text-primary" />
+                </a>
                 <button
                   onClick={() => handleDelete(p.name)}
                   className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
