@@ -40,8 +40,25 @@ if [ -d "$DATA_DIR/logs" ]; then
     find "$DATA_DIR/logs" -name '*.log' ! -name 'latest.log' -mtime +1 -delete 2>/dev/null
 fi
 
-# ---- Remove JPremium (crashes the proxy on boot) ----
-find "$DATA_DIR/plugins" -maxdepth 1 -iname '*jpremium*' -type f -exec rm -v {} +
+# ---- Auto-configure JPremium on first run ----
+# Find JPremium config directory (case-insensitive)
+JPREMIUM_DIR=$(find "$DATA_DIR/plugins" -maxdepth 1 -iname 'jpremium' -type d 2>/dev/null | head -1)
+
+if [ -z "$JPREMIUM_DIR" ] || [ ! -f "$JPREMIUM_DIR/configuration.yml" ]; then
+    echo "JPremium config not found, running bootstrap to generate defaults..."
+    cd "$DATA_DIR"
+    timeout 30 java -Xms256M -Xmx256M -jar /proxy/velocity.jar 2>&1 || true
+    sleep 2
+    # Re-discover the generated config directory
+    JPREMIUM_DIR=$(find "$DATA_DIR/plugins" -maxdepth 1 -iname 'jpremium' -type d 2>/dev/null | head -1)
+fi
+
+if [ -n "$JPREMIUM_DIR" ] && [ -f "$JPREMIUM_DIR/configuration.yml" ]; then
+    echo "Ensuring JPremium server names are configured..."
+    sed -i 's/limboServerNames: \[.*\]/limboServerNames: [bedwars]/' "$JPREMIUM_DIR/configuration.yml"
+    sed -i 's/mainServerNames: \[.*\]/mainServerNames: [bedwars]/' "$JPREMIUM_DIR/configuration.yml"
+    echo "JPremium configured: limbo=[bedwars], main=[bedwars]"
+fi
 
 # ---- Start Velocity Proxy ----
 echo "Starting Velocity proxy with ${MEMORY} RAM..."

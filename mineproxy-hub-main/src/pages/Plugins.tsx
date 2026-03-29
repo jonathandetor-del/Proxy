@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Upload, Trash2, Search } from 'lucide-react';
+import { Package, Upload, Trash2, Search, Power } from 'lucide-react';
 import { api, PluginInfo } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -36,6 +36,20 @@ const Plugins = () => {
       }
     }
     fetchPlugins();
+  };
+
+  const handleToggle = async (name: string, currentlyEnabled: boolean) => {
+    try {
+      const res = await api<{ ok: boolean; enabled: boolean; error?: string }>('POST', `/api/plugins/${encodeURIComponent(name)}/toggle`);
+      if (res.ok) {
+        toast.success(`${name} ${res.enabled ? 'enabled' : 'disabled'} (restart to apply)`);
+        setPlugins(prev => prev.map(p => p.name === name ? { ...p, enabled: res.enabled, filename: res.enabled ? p.filename.replace(/\.disabled\.jar$/i, '.jar') : p.filename.replace(/\.jar$/i, '.disabled.jar') } : p));
+      } else {
+        toast.error(res.error || 'Toggle failed');
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const handleDelete = async (name: string) => {
@@ -96,17 +110,31 @@ const Plugins = () => {
                   <Package className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{p.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{p.name}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${p.enabled ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'}`}>
+                      {p.enabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
                   <p className="text-xs text-muted-foreground">{p.filename}</p>
                 </div>
               </div>
-              <button
-                onClick={() => handleDelete(p.name)}
-                className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
-                title="Delete plugin"
-              >
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleToggle(p.name, p.enabled)}
+                  className={`p-1.5 rounded transition-colors ${p.enabled ? 'hover:bg-yellow-500/10' : 'hover:bg-green-500/10'}`}
+                  title={p.enabled ? 'Disable plugin' : 'Enable plugin'}
+                >
+                  <Power className={`h-3.5 w-3.5 ${p.enabled ? 'text-green-500' : 'text-muted-foreground'}`} />
+                </button>
+                <button
+                  onClick={() => handleDelete(p.name)}
+                  className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
+                  title="Delete plugin"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </button>
+              </div>
             </div>
           ))
         )}

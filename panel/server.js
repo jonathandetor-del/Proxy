@@ -369,6 +369,31 @@ app.post('/api/plugins/upload', auth, (req, res) => {
   }
 });
 
+app.post('/api/plugins/:name/toggle', auth, (req, res) => {
+  const name = req.params.name;
+  try {
+    const entries = fs.readdirSync(PLUGINS_DIR);
+    const jar = entries.find(e =>
+      e.toLowerCase().replace(/\.disabled\.jar$/i, '').replace(/\.jar$/i, '') === name.toLowerCase()
+    );
+    if (!jar) return res.status(404).json({ error: 'Plugin not found' });
+    const oldPath = path.join(PLUGINS_DIR, jar);
+    if (!oldPath.startsWith(PLUGINS_DIR)) return res.status(400).json({ error: 'Invalid path' });
+    let newName;
+    if (jar.endsWith('.disabled.jar')) {
+      newName = jar.replace(/\.disabled\.jar$/i, '.jar');
+    } else {
+      newName = jar.replace(/\.jar$/i, '.disabled.jar');
+    }
+    const newPath = path.join(PLUGINS_DIR, newName);
+    if (!newPath.startsWith(PLUGINS_DIR)) return res.status(400).json({ error: 'Invalid path' });
+    fs.renameSync(oldPath, newPath);
+    res.json({ ok: true, enabled: newName.endsWith('.jar') && !newName.endsWith('.disabled.jar') });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/plugins/:name/delete', auth, (req, res) => {
   const name = req.params.name;
   try {
